@@ -1,48 +1,41 @@
-let express = require('express');
-let app = express();
-let mysql = require('promise-mysql');
-let bodyParser = require('body-parser');
+const express = require('express');
+const app = express();
+const mysql = require('promise-mysql');
+const bodyParser = require('body-parser');
+require('dotenv').config();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
     extended: true
 }));
-
 let params = {
-    host     : 'localhost',
-    user     : 'root',
-    password : 'password',
-    database : 'blog'
+    host     : process.env.DB_HOST,
+    user     : process.env.DB_USER,
+    password : process.env.DB_PASSWORD,
+    database : process.env.DB_NAME,
 };
 
-app.get('/api/article/:id', async function(req,res){
+app.get('/api/article/:id', async (req,res) => {
     const connection = await mysql.createConnection(params);
     connection.query('SELECT * from article where article_id = ?', [req.params.id], function (error, results) {
         res.send(results)
     })
-});
-
-app.get('/api/articles', async function(req,res){
+}).get('/api/articles', async (req,res) => {
     const connection = await mysql.createConnection(params);
     connection.query('SELECT * from article' ,function (error, results) {
         res.send(results)
     })
-});
-
-app.get('/api/user/:id', async function(req,res){
+}).get('/api/user/:id', async (req,res) => {
     const connection = await mysql.createConnection(params);
     connection.query('SELECT * from user where user_id = ?', [req.params.id], function (error, results) {
         console.log(error)
         res.send(results)
     })
-});
-
-app.get('/api/users', async function(req,res){
+}).get('/api/users', async (req,res) => {
     const connection = await mysql.createConnection(params);
     connection.query('SELECT * from user' ,function (error, results) {
         res.send(results)
     })
-});
-app.post('/api/article', async function (req,res) {
+}).post('/api/article', async function (req,res) {
     const connection = await mysql.createConnection(params);
     let body = req.body;
     let title = body.title;
@@ -62,9 +55,7 @@ app.post('/api/article', async function (req,res) {
         connection.query("INSERT INTO articlesUsers set ?", {user : userId, article : articleId })
     });
     res.sendStatus(200)
-});
-
-app.post('/api/user', async function (req, res){
+}).post('/api/user', async function (req, res){
     const connection = await mysql.createConnection(params);
     let body = req.body;
     let username = body.username;
@@ -81,4 +72,4 @@ app.post('/api/user', async function (req, res){
     res.sendStatus(200);
 });
 
-app.listen(8080);
+app.listen(process.env.APP_PORT);
