@@ -15,16 +15,20 @@ let params = {
 };
 
 app.get('/api/article/:id', async (req,res) => {
+    res.header('Access-Control-Allow-Origin', '*');
     const connection = await mysql.createConnection(params);
     connection.query('SELECT * from article where article_id = ?', [req.params.id], function (error, results) {
         res.send(results)
     })
 }).get('/api/articles', async (req,res) => {
+    res.header('Access-Control-Allow-Origin', '*');
     const connection = await mysql.createConnection(params);
-    connection.query('SELECT * from article' ,function (error, results) {
+    connection.query('SELECT article_id,title, article.data, user.username, article.created_at from article JOIN articlesUsers ON article.article_id = articlesUsers.article JOIN user ON user.user_id = articlesUsers.user' ,function (error, results) {
+        console.log(error)
         res.send(results)
     })
 }).get('/api/user/:id', async (req,res) => {
+    res.header('Access-Control-Allow-Origin', '*');
     const connection = await mysql.createConnection(params);
     connection.query('SELECT * from user where user_id = ?', [req.params.id], function (error, results) {
         console.log(error)
@@ -51,6 +55,7 @@ app.get('/api/article/:id', async (req,res) => {
         return;
     }
     connection.query("INSERT INTO article set ?", {title: title, data : JSON.stringify(body), created_at : new Date()},function (error, results) {
+        console.log(error)
         let articleId = results.insertId;
         connection.query("INSERT INTO articlesUsers set ?", {user : userId, article : articleId })
     });
