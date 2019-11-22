@@ -29,22 +29,29 @@ app.get('/api/article/:id', async (req,res) => {
     const connection = await mysql.createConnection(params);
     connection.query('SELECT * from article where article_id = ?', [req.params.id], function (error, results) {
         res.send(results)
-    })
+    });
+    connection.end()
 }).get('/api/articles', async (req,res) => {
     const connection = await mysql.createConnection(params);
     connection.query('SELECT article_id,title, article.data, user.username, article.created_at from article JOIN articlesUsers ON article.article_id = articlesUsers.article JOIN user ON user.user_id = articlesUsers.user' ,function (error, results) {
         res.send(results)
-    })
+    });
+    connection.end()
+
 }).get('/api/user/:id', async (req,res) => {
     const connection = await mysql.createConnection(params);
     connection.query('SELECT * from user where user_id = ?', [req.params.id], function (error, results) {
         res.send(results)
-    })
+    });
+    connection.end()
+
 }).get('/api/users', async (req,res) => {
     const connection = await mysql.createConnection(params);
     connection.query('SELECT * from user' ,function (error, results) {
         res.send(results)
-    })
+    });
+    connection.end()
+
 }).post('/api/article', async function (req,res) {
     const connection = await mysql.createConnection(params);
     let body = req.body;
@@ -64,6 +71,8 @@ app.get('/api/article/:id', async (req,res) => {
         let articleId = results.insertId;
         connection.query("INSERT INTO articlesUsers set ?", {user : userId, article : articleId })
     });
+    connection.end();
+
     res.sendStatus(200)
 }).post('/api/user', async (req, res) => {
     const connection = await mysql.createConnection(params);
@@ -77,11 +86,14 @@ app.get('/api/article/:id', async (req,res) => {
     delete body.email;
     if(!username || !password || !email) {
         res.send(400);
+        connection.end();
         return;
     }
     bcrypt.hash(password,10, (err,hash)=> {
         connection.query('INSERT INTO user set ?', {username : username, password : hash, email : email, data : JSON.stringify(body), created_at: new Date()});
     });
+    connection.end();
+
     res.sendStatus(200);
 }).get('/api/login', async (req,res) => {
     const connection = await mysql.createConnection(params);
@@ -99,8 +111,8 @@ app.get('/api/article/:id', async (req,res) => {
                 },
                 'untrucsecret'
             );
-
             res.send({'token' : token});
+            connection.end();
             return
         }
         res.sendStatus(401);
@@ -108,7 +120,6 @@ app.get('/api/article/:id', async (req,res) => {
 }).post('/api/authed', myMiddleware, async (req, res) => {
     if(!req.user) res.sendStatus(401);
     res.send(req.user)
-    //res.send(req.user)
 });
 
 app.listen(process.env.APP_PORT);
