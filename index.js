@@ -2,7 +2,12 @@ const express = require('express');
 const app = express();
 const mysql = require('promise-mysql');
 const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt');
 require('dotenv').config();
+let jwt = require('jsonwebtoken');
+let cors = require('cors');
+
+app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
     extended: true
@@ -13,7 +18,14 @@ let params = {
     password : process.env.DB_PASSWORD,
     database : process.env.DB_NAME,
 };
-
+const myMiddleware = (req, res, next) => {
+    console.log(req.headers['authorization']);
+    if (req.headers['authorization']) {
+        let tok = jwt.verify (req.headers['authorization'],'untrucsecret');
+        req.user = tok
+    }
+    next()
+};
 app.get('/api/article/:id', async (req,res) => {
     res.header('Access-Control-Allow-Origin', '*');
     const connection = await mysql.createConnection(params);
@@ -24,14 +36,14 @@ app.get('/api/article/:id', async (req,res) => {
     res.header('Access-Control-Allow-Origin', '*');
     const connection = await mysql.createConnection(params);
     connection.query('SELECT article_id,title, article.data, user.username, article.created_at from article JOIN articlesUsers ON article.article_id = articlesUsers.article JOIN user ON user.user_id = articlesUsers.user' ,function (error, results) {
-        console.log(error)
+        console.log(error);
         res.send(results)
     })
 }).get('/api/user/:id', async (req,res) => {
     res.header('Access-Control-Allow-Origin', '*');
     const connection = await mysql.createConnection(params);
     connection.query('SELECT * from user where user_id = ?', [req.params.id], function (error, results) {
-        console.log(error)
+        console.log(error);
         res.send(results)
     })
 }).get('/api/users', async (req,res) => {
@@ -55,17 +67,18 @@ app.get('/api/article/:id', async (req,res) => {
         return;
     }
     connection.query("INSERT INTO article set ?", {title: title, data : JSON.stringify(body), created_at : new Date()},function (error, results) {
-        console.log(error)
+        console.log(error);
         let articleId = results.insertId;
         connection.query("INSERT INTO articlesUsers set ?", {user : userId, article : articleId })
     });
     res.sendStatus(200)
-}).post('/api/user', async function (req, res){
+}).post('/api/user', async (req, res) => {
     const connection = await mysql.createConnection(params);
     let body = req.body;
     let username = body.username;
-    delete body.title;
+    delete body.username;
     let password = body.password;
+
     delete body.password;
     let email = body.email;
     delete body.email;
@@ -73,8 +86,39 @@ app.get('/api/article/:id', async (req,res) => {
         res.send(400);
         return;
     }
-    connection.query('INSERT INTO user set ?', {username : username, password : password, email : email, data : JSON.stringify(body), created_at: new Date()});
+    bcrypt.hash(password,10, (err,hash)=> {
+        connection.query('INSERT INTO user set ?', {username : username, password : hash, email : email, data : JSON.stringify(body), created_at: new Date()});
+    });
     res.sendStatus(200);
+}).get('/api/login', async (req,res) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    const connection = await mysql.createConnection(params);
+    let user = await connection.query('SELECT * from user where username = ?', [req.query.username]);
+    if(user.length === 0){
+        res.sendStatus(401);
+        return;
+    }
+    bcrypt.compare(req.query.password, user[0].password, (err,result) => {
+        if (result){
+            let token = jwt.sign(
+                {
+                    exp : Math.floor(Date.now() / 1000) + (60 * 60),
+                    username: req.query.username
+                },
+                'untrucsecret'
+            );
+
+            res.send({'token' : token});
+            return
+        }
+        res.sendStatus(401);
+    })
+}).post('/api/authed', myMiddleware, async (req, res) => {
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    res.header('Access-Control-Allow-Origin', '*');
+    if (!req.user) res.sendStatus(401);
+    res.send(req.user)
+    //res.send(req.user)
 });
 
 app.listen(process.env.APP_PORT);
