@@ -20,8 +20,10 @@ let params = {
 };
 const myMiddleware = (req, res, next) => {
     if (req.headers['authorization'] !== 'null') {
-        let tok = jwt.verify (req.headers['authorization'],'untrucsecret');
-        req.user = tok
+        jwt.verify(req.headers['authorization'],'untrucsecret', function (err, decoded) {
+            if(err) next()
+            req.user = decoded
+        })
     }
     next()
 };
@@ -94,32 +96,35 @@ app.get('/api/article/:id', async (req,res) => {
     delete body.email;
     if(!username || !password || !email) {
         res.send(400);
-        connection.end();
         return;
     }
     bcrypt.hash(password,10, (err,hash)=> {
-        connection.query('INSERT INTO user set ?', {username : username, password : hash, email : email, data : JSON.stringify(body), created_at: new Date()});
+        connection.query('INSERT INTO user set ?', {username : username, password : hash, email : email, data : JSON.stringify(body), created_at: new Date()}, (error, resutl) => {
+            if (error) {
+                res.sendStatus(400)
+            }
+            else {
+                res.sendStatus(200)
+            }
+        });
     });
-
-    res.sendStatus(200);
-}).get('/api/login', async (req,res) => {
+}).post('/api/login', async (req,res) => {
     const connection = await getConnection();
-    let user = await connection.query('SELECT * from user where username = ?', [req.query.username]);
+    let user = await connection.query('SELECT * from user where username = ?', [req.body.username]);
     if(user.length === 0){
         res.sendStatus(401);
         return;
     }
-    bcrypt.compare(req.query.password, user[0].password, (err,result) => {
+    bcrypt.compare(req.body.password, user[0].password, (err,result) => {
         if (result){
             let token = jwt.sign(
                 {
                     exp : Math.floor(Date.now() / 1000) + (60 * 60),
-                    username: req.query.username
+                    username: req.body.username
                 },
                 'untrucsecret'
             );
             res.send({'token' : token});
-            connection.end();
             return
         }
         res.sendStatus(401);
