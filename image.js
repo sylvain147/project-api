@@ -65,8 +65,6 @@ app.post('/api/image', (req,res) => {
 
     const BUCKET = 'picture-rougetube'
     const REGION = 'eu-west-3'
-    const ACCESS_KEY = 'AKIAJRKTD33GHTZYS3BQ'
-    const SECRET_KEY = '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'
 
     const localImage = './public/uploads/IMAGE-1574694327815.jpg'
     const imageRemoteName = `test2.jpg`
