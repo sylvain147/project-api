@@ -18,11 +18,11 @@ app.use(bodyParser.urlencoded({
 /** Articles **/
 //GET functions
 app.get('/api/articles', article.getArticles);
-app.get('/api/article/:id', article.getArticle);
+app.get('/api/article', article.getArticle);
 app.get('/api/slug', article.createSlug);
 
 //POST functions
-app.post('/api/article', article.createArticle);
+app.post('/api/article',upload.none(), article.createArticle);
 /** fin Articles **/
 
 /** Users **/
@@ -50,4 +50,5 @@ app.post('/api/reloaduser',authorize,user.reloadUser);
 app.put('/api/user/:id',upload.none(), user.updateUser);
 /** FIN users **/
 app.post('/api/image', user.updateAvatar);
+console.log(process.env.APP_PORT)
 app.listen(process.env.APP_PORT);

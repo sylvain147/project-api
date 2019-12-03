@@ -20,8 +20,20 @@ const getConnection = async () => {
 };
 
 getArticle = async (req,res) => {
+    isNaN(req.query.id) ? await getArticleBySlug(req,res): await getArticleById(req,res)  ;
+
+};
+getArticleById = async (req,res) => {
     const connection = await getConnection();
-    connection.query('SELECT * from article where article_id = ?', [req.params.id], function (error, results) {
+    connection.query('SELECT * from article where article_id = ?', [req.query.id], function (error, results) {
+        res.send(results);
+    });
+};
+
+getArticleBySlug = async (req,res) => {
+    const connection = await getConnection();
+
+    connection.query('SELECT * from article where slug = ?', [req.query.id], function (error, results) {
         res.send(results);
     });
 };
@@ -50,7 +62,6 @@ createArticle = async (req,res) => {
         return;
     }
     connection.query("INSERT INTO article set ?", {title: title,slug:slug, data : JSON.stringify(body), created_at : new Date()},function (error, results) {
-        console.log(error);
         let articleId = results.insertId;
         connection.query("INSERT INTO articlesUsers set ?", {user : userId, article : articleId })
     });

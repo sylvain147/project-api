@@ -98,16 +98,16 @@ auth = async (req, res) => {
 updateUser = async (req,res) => {
     const connection = await getConnection();
     connection.query('UPDATE user set data = ? where user_id = ?',[JSON.stringify(req.body), req.params.id] , async (error, res) => {
-        console.log(error);
-        if(!error) res.sendStatus(200)
-    })
+        if(error) { res.sendStatus(500)}
+        return;
+    });
+    res.sendStatus(200)
 };
 updateAvatar = async (req,res) => {
     const form = new multiparty.Form();
     const connection = await getConnection();
     form.parse(req, async (error, fields, files) => {
         if (error) throw new Error(error);
-        console.log('here')
         try {
             const path = files.file[0].path;
             const buffer = fs.readFileSync(path);
