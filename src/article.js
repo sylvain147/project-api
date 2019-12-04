@@ -94,5 +94,5 @@ module.exports = {
     },
     createSlug : async (req,res) =>{
         await createSlug(req,res)
-    }
+    },
 };

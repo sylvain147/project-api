@@ -1,19 +1,11 @@
 const mysql = require('promise-mysql');
 const bcrypt = require('bcrypt');
-let AWS = require('aws-sdk');
-let jwt = require('jsonwebtoken');
-const fs = require('fs');
-
 const multiparty = require('multiparty');
+
+const fs = require('fs');
 const fileType = require('file-type');
-AWS.config.update({
-    accessKeyId: process.env.AWS_ACCESS,
-    secretAccessKey: process.env.AWS_SECRET,
-    region: 'eu-west-3'
-});
-let s3 = new AWS.S3();
 
-
+let jwt = require('jsonwebtoken');
 let connection;
 let params = {
     host: process.env.DB_HOST,
@@ -21,6 +13,7 @@ let params = {
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
 };
+const image = require('./image')
 const getConnection = async () => {
     if (connection) {
         return connection
@@ -103,35 +96,28 @@ updateUser = async (req,res) => {
     });
     res.sendStatus(200)
 };
-updateAvatar = async (req,res) => {
+updateAvatar = async (req, res) => {
+    let connection = await getConnection();
     const form = new multiparty.Form();
-    const connection = await getConnection();
-    form.parse(req, async (error, fields, files) => {
-        if (error) throw new Error(error);
-        try {
+    try {
+        form.parse(req, async (error, fields, files) => {
             const path = files.file[0].path;
-            const buffer = fs.readFileSync(path);
-            const type = fileType(buffer);
-            const timestamp = Date.now().toString();
-            const fileName = `avatar/${timestamp}-avatar`;
-            await uploadPicture(buffer, fileName, type);
-            connection.query('UPDATE user set avatar = ? where user_id = ?', [`${fileName}.${type.ext}`,fields.id[0]])
-            res.send(fileName+'.'+type.ext);
+            console.log(path)
 
-        } catch (error) {
-            return res.status(400).send(error);
-        }
-    });
-}
-uploadPicture = async  (buffer, name, type) => {
-    const params = {
-        ACL: 'public-read',
-        Body: buffer,
-        Bucket: process.env.AWS_BUCKET_NAME,
-        ContentType: type.mime,
-        Key: `${name}.${type.ext}`
-    };
-    return s3.upload(params).promise();
+            const buffer = fs.readFileSync(path);
+            console.log(buffer)
+            const type = fileType(buffer);
+            console.log(type)
+            const avatar = await image.uploadPicture('avatar', path, buffer, type);
+            console.log(avatar)
+            connection.query('UPDATE user set avatar = ? where user_id = ?', [`${avatar}`, fields.id[0]])
+            res.send(avatar)
+        })
+    } catch(error)  {
+        res.sendStatus(500)
+
+    }
+
 }
 reloadUser = async (req,res) => {
     let user = await connection.query('SELECT * from user where user_id = ?', [req.user.user.user_id]);

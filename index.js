@@ -9,7 +9,6 @@ let cors = require('cors');
 
 const article = require('./src/article');
 const user = require('./src/user');
-const image = require('./src/image');
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
